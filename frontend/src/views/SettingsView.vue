@@ -1,200 +1,181 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4 py-8">
-    <!-- Header -->
+  <div>
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-        <font-awesome-icon icon="fa-solid fa-gear" class="text-indigo-600" />
-        <span>LLM API 設定</span>
-      </h1>
-      <p class="mt-2 text-gray-500">每個功能模組可獨立配置 API，留空則使用 DEFAULT 預設值</p>
+      <h1 class="text-3xl font-bold text-gray-900">{{ t('settings.title') }}</h1>
+      <p class="text-gray-500 mt-1">{{ t('settings.subtitle') }}</p>
     </div>
 
-    <!-- Loading -->
-    <div v-if="store.loading && store.modules.length === 0" class="flex justify-center py-12">
-      <font-awesome-icon icon="fa-solid fa-spinner" class="animate-spin text-3xl text-indigo-500" />
+    
+    <div class="flex flex-wrap gap-2 mb-6">
+      <button
+        v-for="mod in moduleList"
+        :key="mod.value"
+        @click="activeModule = mod.value"
+        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        :class="activeModule === mod.value ? 'bg-violet-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300'"
+      >
+        {{ mod.label }}
+        <span v-if="hasCustomConfig(mod.value) && activeModule !== mod.value" class="ml-1.5 text-xs opacity-70">
+          ({{ t('settings.custom') }})
+        </span>
+      </button>
     </div>
 
-    <!-- Error -->
-    <div v-if="store.error && store.modules.length === 0" class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-6">
-      {{ store.error }}
+    
+    <div v-if="store.loading" class="flex justify-center py-8">
+      <font-awesome-icon icon="fa-solid fa-spinner" spin class="text-violet-600" />
     </div>
 
-    <!-- Module Cards -->
-    <div v-for="mod in moduleList" :key="mod.module_name" class="my-4 bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-      <!-- Module Header -->
-      <div class="flex items-center justify-between mb-5">
-        <div class="flex items-center space-x-3">
-          <font-awesome-icon :icon="mod.icon" class="text-xl text-indigo-500" />
-          <h2 class="font-semibold text-lg text-gray-900">{{ mod.label }}</h2>
-          <span
-            class="text-xs px-2 py-0.5 rounded-full font-medium"
-            :class="badgeClass(mod)"
-          >{{ badgeText(mod) }}</span>
-        </div>
-        <button
-          v-if="mod.module_name !== 'default'"
-          @click="handleDelete(mod.module_name)"
-          :disabled="deletingModule === mod.module_name"
-          class="flex items-center space-x-1 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-        >
-          <font-awesome-icon icon="fa-solid fa-undo" class="text-xs" />
-          <span>清除設定</span>
-        </button>
-      </div>
-
-      <!-- Fields -->
-      <div class="space-y-4">
-        <!-- API Key -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-          <div class="relative">
-            <input
-              :type="showPassword[mod.module_name] ? 'text' : 'password'"
-              v-model="formData[mod.module_name].api_key"
-              placeholder="留空使用預設值"
-              class="border border-gray-300 rounded-lg px-3 py-2 w-full pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-            <button
-              @click="togglePassword(mod.module_name)"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <font-awesome-icon :icon="showPassword[mod.module_name] ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Base URL -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
-          <input
-            type="text"
-            v-model="formData[mod.module_name].base_url"
-            placeholder="留空使用預設值"
-            class="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-        </div>
-
-        <!-- Model -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
-          <input
-            type="text"
-            v-model="formData[mod.module_name].model"
-            placeholder="留空使用預設值"
-            class="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
+    <div v-else class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">
+          {{ currentModuleLabel }}
+          <span v-if="hasCustomConfig(activeModule)" class="ml-2 text-xs text-green-600 font-normal">
+            {{ t('settings.custom') }}
+          </span>
+          <span v-else class="ml-2 text-xs text-gray-400 font-normal">
+            {{ t('settings.usingDefault') }}
+          </span>
+        </h2>
+        <div class="flex space-x-2">
+          <button
+            v-if="hasCustomConfig(activeModule)"
+            @click="clearModule"
+            class="text-xs text-red-500 hover:text-red-700"
+          >
+            {{ t('settings.clearSettings') }}
+          </button>
+          <button
+            @click="saveModule"
+            :disabled="store.loading"
+            class="bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          >
+            {{ saveSuccess ? t('common.saved') : t('settings.saveSettings') }}
+          </button>
         </div>
       </div>
 
-      <!-- Save Button -->
-      <div class="mt-5 flex items-center space-x-3">
-        <button
-          @click="handleSave(mod.module_name)"
-          :disabled="savingModule === mod.module_name"
-          class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-        >
-          <font-awesome-icon v-if="savingModule === mod.module_name" icon="fa-solid fa-spinner" class="animate-spin" />
-          <span>儲存設定</span>
-        </button>
-
-        <!-- Success/Error feedback -->
-        <span v-if="feedback[mod.module_name] === 'success'" class="text-green-600 text-sm font-medium">
-          <font-awesome-icon icon="fa-solid fa-check" class="mr-1" />已儲存
-        </span>
-        <span v-if="feedback[mod.module_name] === 'error'" class="text-red-600 text-sm font-medium">
-          <font-awesome-icon icon="fa-solid fa-times" class="mr-1" />儲存失敗
-        </span>
+      <div v-if="form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('settings.apiKey') }}</label>
+          <input
+            v-model="form.api_key"
+            type="password"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+            :placeholder="t('common.placeholder_optional')"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('settings.baseUrl') }}</label>
+          <input
+            v-model="form.base_url"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+            :placeholder="t('settings.baseUrlPlaceholder')"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('settings.model') }}</label>
+          <input
+            v-model="form.model"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+            :placeholder="t('settings.modelPlaceholder')"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('settings.systemPrompt') }}</label>
+          <textarea
+            v-model="form.system_prompt"
+            rows="3"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+            :placeholder="t('settings.systemPromptPlaceholder')"
+          ></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            {{ t('settings.userPromptTemplate') }}
+            <span class="text-gray-400 font-normal">{{ t('settings.userPromptTemplateHint') }}</span>
+          </label>
+          <textarea
+            v-model="form.user_prompt_template"
+            rows="3"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+            :placeholder="t('settings.userPromptTemplatePlaceholder')"
+          ></textarea>
+        </div>
       </div>
     </div>
   </div>
-</template>
-
-<script setup>
-import { ref, reactive, onMounted } from 'vue'
+</template><script setup lang="ts">
+import { ref, computed, reactive, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../stores/settings'
 
+const { t } = useI18n()
 const store = useSettingsStore()
 
 const moduleList = [
-  { module_name: 'default', label: '全域預設 (DEFAULT)', icon: 'fa-solid fa-shield-halved' },
-  { module_name: 'worldbuilding', label: '世界觀規劃器 (Worldbuilding)', icon: 'fa-solid fa-globe' },
-  { module_name: 'character', label: '角色管理器 (Character)', icon: 'fa-solid fa-users' },
-  { module_name: 'outline', label: '故事大綱生成器 (Outline)', icon: 'fa-solid fa-list-ol' },
-  { module_name: 'scene', label: 'Story Planner (Scene)', icon: 'fa-solid fa-clapperboard' },
-  { module_name: 'chapter', label: '章節生成器 (Chapter)', icon: 'fa-solid fa-book' }
+  { value: 'default', label: t('settings.modules.default') },
+  { value: 'worldbuilding', label: t('settings.modules.worldbuilding') },
+  { value: 'character', label: t('settings.modules.character') },
+  { value: 'outline', label: t('settings.modules.outline') },
+  { value: 'scene', label: t('settings.modules.scene') },
+  { value: 'chapter', label: t('settings.modules.chapter') },
+  { value: 'compact', label: t('settings.modules.compact') },
 ]
 
-// Initialize reactive state synchronously (before template renders)
-const showPassword = reactive({})
-const formData = reactive({})
-const feedback = reactive({})
-moduleList.forEach(m => {
-  showPassword[m.module_name] = false
-  formData[m.module_name] = { api_key: '', base_url: '', model: '' }
-  feedback[m.module_name] = null
+const activeModule = ref('default')
+const form = reactive<any>({
+  api_key: '',
+  base_url: '',
+  model: '',
+  system_prompt: '',
+  user_prompt_template: '',
+})
+const saveSuccess = ref(false)
+
+const currentModuleLabel = computed(() => {
+  const m = moduleList.find(m => m.value === activeModule.value)
+  return m?.label || ''
 })
 
-const savingModule = ref(null)
-const deletingModule = ref(null)
-
-function initForms() {
-  moduleList.forEach(m => {
-    const existing = store.modules.find(mod => mod.module_name === m.module_name)
-    if (existing) {
-      formData[m.module_name] = {
-        api_key: existing.api_key || '',
-        base_url: existing.base_url || '',
-        model: existing.model || ''
-      }
-    }
-  })
+function hasCustomConfig(moduleName: string): boolean {
+  return store.modules.some(m => m.module_name === moduleName && m.id != null)
 }
 
-function badgeClass(mod) {
-  if (mod.module_name === 'default') return 'bg-blue-100 text-blue-700'
-  const existing = store.modules.find(m => m.module_name === mod.module_name)
-  return existing?.api_key ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+function loadModule(moduleName: string) {
+  const config = store.modules.find(m => m.module_name === moduleName)
+  form.api_key = config?.api_key || ''
+  form.base_url = config?.base_url || ''
+  form.model = config?.model || ''
+  form.system_prompt = config?.system_prompt || ''
+  form.user_prompt_template = config?.user_prompt_template || ''
 }
 
-function badgeText(mod) {
-  if (mod.module_name === 'default') return '全域預設'
-  const existing = store.modules.find(m => m.module_name === mod.module_name)
-  return existing?.api_key ? '已自訂' : '使用 DEFAULT'
-}
+watch(activeModule, loadModule)
 
-function togglePassword(name) {
-  showPassword[name] = !showPassword[name]
-}
+async function saveModule() {
+  saveSuccess.value = false
+  const data: any = {}
+  if (form.api_key) data.api_key = form.api_key
+  if (form.base_url) data.base_url = form.base_url
+  if (form.model) data.model = form.model
+  if (form.system_prompt) data.system_prompt = form.system_prompt
+  if (form.user_prompt_template) data.user_prompt_template = form.user_prompt_template
 
-async function handleSave(moduleName) {
-  savingModule.value = moduleName
-  feedback[moduleName] = null
-  const data = { ...formData[moduleName] }
-  const ok = await store.updateModule(moduleName, data)
+  const ok = await store.updateModule(activeModule.value, data)
   if (ok) {
-    feedback[moduleName] = 'success'
-    setTimeout(() => { feedback[moduleName] = null }, 2000)
-  } else {
-    feedback[moduleName] = 'error'
+    saveSuccess.value = true
+    setTimeout(() => { saveSuccess.value = false }, 2000)
   }
-  savingModule.value = null
 }
 
-async function handleDelete(moduleName) {
-  deletingModule.value = moduleName
-  const ok = await store.deleteModule(moduleName)
-  if (ok) {
-    formData[moduleName] = { api_key: '', base_url: '', model: '' }
-    feedback[moduleName] = 'success'
-    setTimeout(() => { feedback[moduleName] = null }, 2000)
-  } else {
-    feedback[moduleName] = 'error'
-  }
-  deletingModule.value = null
+async function clearModule() {
+  await store.deleteModule(activeModule.value)
+  loadModule(activeModule.value)
 }
 
 onMounted(async () => {
   await store.fetchAll()
-  initForms()
+  loadModule(activeModule.value)
 })
 </script>

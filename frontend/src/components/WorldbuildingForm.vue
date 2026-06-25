@@ -1,184 +1,176 @@
 <template>
-  <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-    <button
-      @click="expanded = !expanded"
-      class="flex items-center justify-between w-full text-left"
-    >
-      <span class="text-lg font-semibold text-gray-900">
-        <font-awesome-icon icon="fa-solid fa-plus" class="mr-2 text-indigo-600" />
-        {{ editingId ? '編輯世界觀' : '建立世界觀' }}
-      </span>
-      <font-awesome-icon
-        :icon="expanded ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"
-        class="text-gray-400"
-      />
-    </button>
-
-    <div v-if="expanded" class="mt-4 space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">標題 <span class="text-red-500">*</span></label>
-        <input
-          v-model="form.title"
-          type="text"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="世界觀標題"
-        />
+  
+  <div v-if="!editingId" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+        <font-awesome-icon icon="fa-solid fa-wand-magic-sparkles" class="text-indigo-600" />
       </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">類型</label>
-        <input
-          v-model="form.genre"
-          type="text"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="奇幻、科幻、武俠…"
-        />
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">描述</label>
-        <textarea
-          v-model="form.description"
-          rows="3"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="描述這個世界的概況…"
-        ></textarea>
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">環境設定</label>
-        <textarea
-          v-model="form.setting"
-          rows="3"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="地理環境、時代背景…"
-        ></textarea>
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">世界規則</label>
-        <textarea
-          v-model="form.rules"
-          rows="3"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="魔法體系、科技規則、社會制度…"
-        ></textarea>
-      </div>
-
-      <div class="flex flex-wrap gap-3">
-        <button
-          v-if="!editingId"
-          @click="submitForm"
-          :disabled="store.loading || !form.title"
-          class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-lg px-4 py-2 font-medium transition-colors"
-        >
-          <font-awesome-icon v-if="store.loading" icon="fa-solid fa-spinner" spin class="mr-1" />
-          建立
-        </button>
-        <button
-          v-if="editingId"
-          @click="updateForm"
-          :disabled="store.loading || !form.title"
-          class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-lg px-4 py-2 font-medium transition-colors"
-        >
-          儲存
-        </button>
-        <button
-          v-if="editingId"
-          @click="cancelEdit"
-          class="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg px-4 py-2 font-medium transition-colors"
-        >
-          取消
-        </button>
-      </div>
-
-      <!-- AI generate section (for new creation) -->
-      <div v-if="!editingId" class="border-t border-gray-200 pt-4 mt-4">
-        <p class="text-sm font-medium text-gray-700 mb-3">
-          <font-awesome-icon icon="fa-solid fa-magic-wand-sparkles" class="text-indigo-600 mr-1" />
-          AI 快速生成
-        </p>
-        <div class="flex gap-3">
-          <input
-            v-model="aiTheme"
-            type="text"
-            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="輸入主題概念，如：蒸汽龐克魔法學院"
-          />
-          <button
-            @click="aiGenerate"
-            :disabled="store.loading || !aiTheme"
-            class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-lg px-4 py-2 font-medium transition-colors"
-          >
-            <font-awesome-icon v-if="store.loading" icon="fa-solid fa-spinner" spin class="mr-1" />
-            生成
-          </button>
-        </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-gray-900 mb-0.5">{{ t('worldbuilding.aiGenerate') }}</p>
+        <p class="text-xs text-gray-400">{{ t('worldbuilding.aiGenerateDesc') }}</p>
       </div>
     </div>
+    <div class="flex gap-3 mt-4">
+      <input v-model="aiTheme" type="text"
+        class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+        :placeholder="t('worldbuilding.aiPlaceholder')" @keydown.enter.prevent="aiGenerate" />
+      <button @click="aiGenerate" :disabled="store.loading || !aiTheme"
+        class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-lg px-5 py-2 font-medium transition-colors text-sm flex-shrink-0">
+        <font-awesome-icon v-if="store.loading" icon="fa-solid fa-spinner" spin class="mr-1.5" />{{ t('worldbuilding.generate') }}
+      </button>
+    </div>
   </div>
-</template>
 
-<script setup>
-import { ref, reactive } from 'vue'
+  
+  <Form v-if="editingId" ref="editPanel" :validation-schema="validationSchema" :initial-values="initialForm" @submit="updateForm"
+    class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-lg font-semibold text-gray-900">
+        <font-awesome-icon icon="fa-solid fa-edit" class="mr-2 text-indigo-600" />{{ t('worldbuilding.editTitle') }}
+      </span>
+      <button type="button" @click="cancelEdit" class="text-gray-400 hover:text-gray-600 transition-colors">
+        <font-awesome-icon icon="fa-solid fa-times" class="text-lg" />
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('worldbuilding.name') }} <span class="text-red-500">*</span></label>
+        <Field name="title" v-slot="{ field, errorMessage }">
+          <input v-bind="field" type="text" :placeholder="t('worldbuilding.namePlaceholder')"
+            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            :class="errorMessage ? 'border-red-400' : 'border-gray-300'" />
+        </Field>
+        <ErrorMessage name="title" class="text-red-500 text-xs mt-1" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('worldbuilding.genre') }}</label>
+        <Field name="genre" v-slot="{ field }">
+          <input v-bind="field" type="text" :placeholder="t('worldbuilding.genrePlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+        </Field>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('worldbuilding.description') }}</label>
+        <Field name="description" v-slot="{ field }">
+          <textarea v-bind="field" rows="3" :placeholder="t('worldbuilding.descriptionPlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+        </Field>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('worldbuilding.setting') }}</label>
+        <Field name="setting" v-slot="{ field }">
+          <textarea v-bind="field" rows="3" :placeholder="t('worldbuilding.settingPlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+        </Field>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('worldbuilding.rules') }}</label>
+        <Field name="rules" v-slot="{ field }">
+          <textarea v-bind="field" rows="3" :placeholder="t('worldbuilding.rulesPlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+        </Field>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          {{ t('common.aiContent') }}
+          <button
+            type="button"
+            @click="regenSummary"
+            :disabled="summaryLoading"
+            class="ml-2 text-xs text-indigo-500 hover:text-indigo-700 disabled:text-indigo-300 transition-colors align-middle"
+            :title="t('common.regenerateSummary')"
+          >
+            <font-awesome-icon
+              :icon="summaryLoading ? 'fa-solid fa-spinner' : 'fa-solid fa-arrows-rotate'"
+              :spin="summaryLoading"
+            />
+          </button>
+        </label>
+        <Field name="summary" v-slot="{ field }">
+          <textarea v-bind="field" rows="3" :placeholder="t('common.aiContentPlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+        </Field>
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" :disabled="store.loading"
+          class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm">{{ t('common.save') }}</button>
+        <button type="button" @click="cancelEdit"
+          class="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg px-4 py-2 font-medium transition-colors text-sm">{{ t('common.cancel') }}</button>
+      </div>
+    </div>
+  </Form>
+</template><script setup lang="ts">
+import { ref, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Form, Field, ErrorMessage } from 'vee-validate'
+import { toFormValidator } from '@vee-validate/zod'
 import { useWorldbuildingStore } from '../stores/worldbuilding'
+import { createWorldbuildingSchema } from '../utils/validation'
+import * as api from '../api'
+import { extractErrorMessage } from '../utils/error'
 
+const props = defineProps({ novelId: { type: Number, required: true } })
+
+const { t } = useI18n()
 const store = useWorldbuildingStore()
-const expanded = ref(true)
-const editingId = ref(null)
+const validationSchema = toFormValidator(createWorldbuildingSchema())
+const editingId = ref<number | null>(null)
 const aiTheme = ref('')
+const editPanel = ref<any>(null)
+const initialForm = ref({})
+const summaryLoading = ref(false)
 
-const emptyForm = () => ({
-  title: '',
-  genre: '',
-  description: '',
-  setting: '',
-  rules: ''
-})
-
-const form = reactive(emptyForm())
-
-async function submitForm() {
-  const data = await store.create({ ...form })
-  if (data) {
-    Object.assign(form, emptyForm())
-  }
+function emptySnapshot() {
+  return { title: '', genre: '', description: '', setting: '', rules: '', summary: '' }
 }
 
-async function updateForm() {
-  await store.update(editingId.value, { ...form })
+async function updateForm(values) {
+  await store.update(editingId.value, values)
   cancelEdit()
 }
 
 async function aiGenerate() {
-  const tempData = await store.create({ title: aiTheme.value, genre: '', description: '', setting: '', rules: '' })
-  if (tempData) {
-    const result = await store.generateWorldbuilding(tempData.id, aiTheme.value)
-    if (result) {
-      const idx = store.worldbuildings.findIndex(w => w.id === tempData.id)
-      if (idx !== -1) {
-        store.worldbuildings[idx] = result
-      }
-    }
+  if (!aiTheme.value.trim() || store.loading) return
+  store.loading = true
+  store.error = null
+  try {
+    await api.generateWorldbuilding(props.novelId, aiTheme.value)
+    await store.fetchAll(props.novelId)
     aiTheme.value = ''
+  } catch (e) {
+    store.error = extractErrorMessage(e)
+  } finally {
+    store.loading = false
   }
 }
 
 function startEdit(wb) {
   editingId.value = wb.id
-  Object.assign(form, {
-    title: wb.title,
+  initialForm.value = {
+    title: wb.title || '',
     genre: wb.genre || '',
     description: wb.description || '',
     setting: wb.setting || '',
-    rules: wb.rules || ''
-  })
-  expanded.value = true
+    rules: wb.rules || '',
+    summary: wb.summary || ''
+  }
+  nextTick(() => { editPanel.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'start' }) })
+}
+
+async function regenSummary() {
+  if (summaryLoading.value || !editingId.value) return
+  summaryLoading.value = true
+  try {
+    const result = await store.regenerateSummary(editingId.value)
+    editPanel.value?.resetForm({ values: { ...editPanel.value?.values, summary: result.summary || '' } })
+  } finally {
+    summaryLoading.value = false
+  }
 }
 
 function cancelEdit() {
   editingId.value = null
-  Object.assign(form, emptyForm())
+  initialForm.value = emptySnapshot()
 }
 
 defineExpose({ startEdit })

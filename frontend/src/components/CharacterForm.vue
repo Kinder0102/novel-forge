@@ -1,193 +1,191 @@
 <template>
-  <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-    <button
-      @click="expanded = !expanded"
-      class="flex items-center justify-between w-full text-left"
-    >
-      <span class="text-lg font-semibold text-gray-900">
-        <font-awesome-icon icon="fa-solid fa-plus" class="mr-2 text-indigo-600" />
-        {{ editingId ? '編輯角色' : '建立角色' }}
-      </span>
-      <font-awesome-icon
-        :icon="expanded ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"
-        class="text-gray-400"
-      />
-    </button>
-
-    <div v-if="expanded" class="mt-4 space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">名稱 <span class="text-red-500">*</span></label>
-        <input
-          v-model="form.name"
-          type="text"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="角色名稱"
-        />
+  
+  <div v-if="!editingId" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+        <font-awesome-icon icon="fa-solid fa-wand-magic-sparkles" class="text-emerald-600" />
       </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">角色定位</label>
-        <input
-          v-model="form.role"
-          type="text"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="主角、反派、導師…"
-        />
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">性格特質</label>
-        <textarea
-          v-model="form.personality"
-          rows="2"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="角色的性格描述…"
-        ></textarea>
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">背景故事</label>
-        <textarea
-          v-model="form.background"
-          rows="3"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="角色的過往經歷…"
-        ></textarea>
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">外貌描寫</label>
-        <textarea
-          v-model="form.appearance"
-          rows="2"
-          class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="角色的外貌特徵…"
-        ></textarea>
-      </div>
-
-      <div class="flex flex-wrap gap-3">
-        <button
-          v-if="!editingId"
-          @click="submitForm"
-          :disabled="store.loading || !form.name"
-          class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-lg px-4 py-2 font-medium transition-colors"
-        >
-          <font-awesome-icon v-if="store.loading" icon="fa-solid fa-spinner" spin class="mr-1" />
-          建立
-        </button>
-        <button
-          v-if="editingId"
-          @click="updateForm"
-          :disabled="store.loading || !form.name"
-          class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-lg px-4 py-2 font-medium transition-colors"
-        >
-          儲存
-        </button>
-        <button
-          v-if="editingId"
-          @click="cancelEdit"
-          class="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg px-4 py-2 font-medium transition-colors"
-        >
-          取消
-        </button>
-      </div>
-
-      <!-- AI generate -->
-      <div v-if="!editingId" class="border-t border-gray-200 pt-4 mt-4">
-        <p class="text-sm font-medium text-gray-700 mb-3">
-          <font-awesome-icon icon="fa-solid fa-magic-wand-sparkles" class="text-indigo-600 mr-1" />
-          AI 生成角色
-        </p>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">角色描述（選填）</label>
-            <textarea
-              v-model="aiDescription"
-              rows="2"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="角色描述，例如：一個沉默寡言的流浪劍客，背負著滅門之仇…"
-            ></textarea>
-          </div>
-          <button
-            @click="aiGenerate"
-            :disabled="store.loading"
-            class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm"
-          >
-            <font-awesome-icon v-if="store.loading" icon="fa-solid fa-spinner" spin class="mr-1" />
-            生成角色
-          </button>
-        </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-gray-900 mb-0.5">{{ t('character.aiGenerate') }}</p>
+        <p class="text-xs text-gray-400">{{ t('character.aiGenerateDesc') }}</p>
       </div>
     </div>
+    <div class="space-y-3 mt-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('character.selectWorldbuilding') }} <span class="text-red-500">*</span></label>
+        <select v-model="selectedWorldbuildingId"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+          <option :value="null" disabled>{{ t('character.selectWorldbuildingPlaceholder') }}</option>
+          <option v-for="wb in worldbuildingList" :key="wb.id" :value="wb.id">
+            {{ wb.title }}
+          </option>
+        </select>
+      </div>
+      <textarea v-model="aiDescription" rows="2"
+        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+        :placeholder="t('character.aiPlaceholder')"></textarea>
+      <button @click="aiGenerate" :disabled="store.loading || !selectedWorldbuildingId"
+        class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white rounded-lg px-5 py-2 font-medium transition-colors text-sm">
+        <font-awesome-icon v-if="store.loading" icon="fa-solid fa-spinner" spin class="mr-1.5" />
+        {{ t('character.generateCharacter') }}
+      </button>
+    </div>
   </div>
-</template>
 
-<script setup>
-import { ref, reactive } from 'vue'
+  
+  <Form v-if="editingId" ref="editPanel" :validation-schema="validationSchema" :initial-values="initialForm" @submit="updateForm"
+    class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-lg font-semibold text-gray-900">
+        <font-awesome-icon icon="fa-solid fa-edit" class="mr-2 text-emerald-600" />{{ t('character.editTitle') }}
+      </span>
+      <button type="button" @click="cancelEdit" class="text-gray-400 hover:text-gray-600 transition-colors">
+        <font-awesome-icon icon="fa-solid fa-times" class="text-lg" />
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('character.name') }} <span class="text-red-500">*</span></label>
+        <Field name="name" v-slot="{ field, errorMessage }">
+          <input v-bind="field" type="text" :placeholder="t('character.namePlaceholder')"
+            class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            :class="errorMessage ? 'border-red-400' : 'border-gray-300'" />
+        </Field>
+        <ErrorMessage name="name" class="text-red-500 text-xs mt-1" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('character.role') }}</label>
+        <Field name="role" v-slot="{ field }">
+          <input v-bind="field" type="text" :placeholder="t('character.rolePlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
+        </Field>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('character.personality') }}</label>
+        <Field name="personality" v-slot="{ field }">
+          <textarea v-bind="field" rows="2" :placeholder="t('character.personalityPlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"></textarea>
+        </Field>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('character.background') }}</label>
+        <Field name="background" v-slot="{ field }">
+          <textarea v-bind="field" rows="3" :placeholder="t('character.backgroundPlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"></textarea>
+        </Field>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('character.appearance') }}</label>
+        <Field name="appearance" v-slot="{ field }">
+          <textarea v-bind="field" rows="2" :placeholder="t('character.appearancePlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"></textarea>
+        </Field>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <label class="block text-sm font-medium text-gray-700">{{ t('common.aiContent') }}</label>
+          <button type="button" @click="regenSummary" :disabled="regenLoading"
+            class="p-1 rounded text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+            :title="t('common.regenerateSummary')">
+            <font-awesome-icon
+              :icon="regenLoading ? 'fa-solid fa-spinner' : 'fa-solid fa-arrows-rotate'"
+              :spin="regenLoading"
+              class="text-xs"/>
+          </button>
+        </div>
+        <Field name="summary" v-slot="{ field }">
+          <textarea v-bind="field" rows="2" :placeholder="t('common.aiContentPlaceholder')"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"></textarea>
+        </Field>
+      </div>
+
+      <div class="flex gap-3">
+        <button type="submit" :disabled="store.loading"
+          class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white rounded-lg px-4 py-2 font-medium transition-colors text-sm">{{ t('common.save') }}</button>
+        <button type="button" @click="cancelEdit"
+          class="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg px-4 py-2 font-medium transition-colors text-sm">{{ t('common.cancel') }}</button>
+      </div>
+    </div>
+  </Form>
+</template><script setup lang="ts">
+import { ref, reactive, nextTick, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { Form, Field, ErrorMessage } from 'vee-validate'
+import { toFormValidator } from '@vee-validate/zod'
 import { useCharacterStore } from '../stores/character'
-import { useWorldbuildingStore } from '../stores/worldbuilding'
+import { getWorldbuildings } from '../api'
+import { createCharacterSchema } from '../utils/validation'
 
-const props = defineProps({
-  worldbuildingId: { type: Number, required: true }
-})
+const props = defineProps({ novelId: { type: Number, required: true } })
 
+const { t } = useI18n()
 const store = useCharacterStore()
-const wbStore = useWorldbuildingStore()
-const expanded = ref(false)
-const editingId = ref(null)
+const validationSchema = toFormValidator(createCharacterSchema())
+const editingId = ref<number | null>(null)
 const aiDescription = ref('')
+const selectedWorldbuildingId = ref<number | null>(null)
+const worldbuildingList = ref([])
+const editPanel = ref<any>(null)
+const initialForm = ref({})
+const regenLoading = ref(false)
 
-const emptyForm = () => ({
-  name: '',
-  role: '',
-  personality: '',
-  background: '',
-  appearance: ''
+onMounted(async () => {
+  try {
+    const res = await getWorldbuildings(props.novelId)
+    worldbuildingList.value = res.data || []
+  } catch (e) {
+    console.error('Failed to load worldbuilding list', e)
+  }
 })
 
-const form = reactive(emptyForm())
-
-async function submitForm() {
-  const data = await store.create({ ...form, worldbuilding_id: props.worldbuildingId })
-  if (data) {
-    Object.assign(form, emptyForm())
-    expanded.value = false
-  }
+function emptySnapshot() {
+  return { name: '', role: '', personality: '', background: '', appearance: '', summary: '' }
 }
 
-async function updateForm() {
-  await store.update(editingId.value, { ...form })
+async function updateForm(values) {
+  await store.update(editingId.value, values)
   cancelEdit()
 }
 
 async function aiGenerate() {
-  const wb = wbStore.worldbuildings.find(w => w.id === props.worldbuildingId)
-  const context = wb ? `${wb.title}\n${wb.description}\n${wb.setting}` : ''
-  const payload = {
-    worldbuilding_id: props.worldbuildingId,
-    worldbuilding_context: context
-  }
-  if (aiDescription.value.trim()) {
-    payload.description = aiDescription.value.trim()
-  }
+  const payload = { novel_id: props.novelId, worldbuilding_id: selectedWorldbuildingId.value }
+  if (aiDescription.value.trim()) payload.description = aiDescription.value.trim()
   await store.generateCharacters(payload)
 }
 
 function startEdit(ch) {
   editingId.value = ch.id
-  Object.assign(form, {
-    name: ch.name,
+  initialForm.value = {
+    name: ch.name || '',
     role: ch.role || '',
     personality: ch.personality || '',
     background: ch.background || '',
-    appearance: ch.appearance || ''
-  })
-  expanded.value = true
+    appearance: ch.appearance || '',
+    summary: ch.summary || ''
+  }
+  nextTick(() => { editPanel.value?.$el?.scrollIntoView({ behavior: 'smooth', block: 'start' }) })
+}
+
+async function regenSummary() {
+  if (!editingId.value) return
+  regenLoading.value = true
+  try {
+    const result = await store.regenerateSummary(editingId.value)
+    editPanel.value?.resetForm({ values: { ...editPanel.value?.values, summary: result.summary || '' } })
+  } catch {
+  } finally {
+    regenLoading.value = false
+  }
 }
 
 function cancelEdit() {
   editingId.value = null
-  Object.assign(form, emptyForm())
+  initialForm.value = emptySnapshot()
 }
 
 defineExpose({ startEdit })

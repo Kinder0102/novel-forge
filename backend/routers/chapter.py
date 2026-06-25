@@ -1,109 +1,82 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+
 from database import get_db
-from models.schemas import (
-    ChapterContent, ChapterContentCreate, ChapterContentUpdate, ChapterContentResponse,
-    Outline,
-)
-from services.ai_service import generate_chapter
+from models.chapter import ChapterContent, ChapterContentCreate, ChapterContentUpdate, ChapterContentResponse, GenerateChapterRequest
+from models.outline import ChapterTitle, Outline
+from services.ai_service.generators.chapter import ChapterGenerator
+from crud_base import CrudBase
 
 router = APIRouter()
+
+DELETE_OK = {"message": "已刪除"}
+ENTITY = "章節"
 
 
 @router.post("/", response_model=ChapterContentResponse)
 def create_chapter(data: ChapterContentCreate, db: Session = Depends(get_db)):
-    chap = ChapterContent(**data.model_dump())
-    db.add(chap)
+    chapter = ChapterContent(**data.model_dump())
+    db.add(chapter)
     db.commit()
-    db.refresh(chap)
-    return chap
+    db.refresh(chapter)
+    return chapter
 
 
 @router.get("/", response_model=list[ChapterContentResponse])
 def list_chapters(
     outline_id: int = Query(None),
+    novel_id: int = Query(None),
     db: Session = Depends(get_db),
 ):
-    q = db.query(ChapterContent)
+    q = db.query(ChapterContent).join(ChapterTitle, ChapterContent.chapter_title_id == ChapterTitle.id)
     if outline_id is not None:
-        q = q.filter(ChapterContent.outline_id == outline_id)
-    return q.order_by(ChapterContent.chapter_index).all()
+        q = q.filter(ChapterTitle.outline_id == outline_id)
+    return q.order_by(ChapterContent.updated_at.desc()).all()
 
 
 @router.get("/{chap_id}", response_model=ChapterContentResponse)
 def get_chapter(chap_id: int, db: Session = Depends(get_db)):
-    chap = db.query(ChapterContent).filter(ChapterContent.id == chap_id).first()
-    if not chap:
-        raise HTTPException(status_code=404, detail="章節不存在")
-    return chap
+    return CrudBase(db).get_or_404(ChapterContent, chap_id, ENTITY)
 
 
 @router.put("/{chap_id}", response_model=ChapterContentResponse)
 def update_chapter(chap_id: int, data: ChapterContentUpdate, db: Session = Depends(get_db)):
-    chap = db.query(ChapterContent).filter(ChapterContent.id == chap_id).first()
-    if not chap:
-        raise HTTPException(status_code=404, detail="章節不存在")
-    for key, val in data.model_dump(exclude_unset=True).items():
-        setattr(chap, key, val)
-    db.commit()
-    db.refresh(chap)
-    return chap
+    crud = CrudBase(db)
+    chapter = crud.get_or_404(ChapterContent, chap_id, ENTITY)
+    return crud.update_and_commit(chapter, data)
 
 
 @router.delete("/{chap_id}")
 def delete_chapter(chap_id: int, db: Session = Depends(get_db)):
-    chap = db.query(ChapterContent).filter(ChapterContent.id == chap_id).first()
-    if not chap:
-        raise HTTPException(status_code=404, detail="章節不存在")
-    db.delete(chap)
-    db.commit()
-    return {"message": "已刪除"}
-
-
-class GenerateChapterRequest(BaseModel):
-    outline_id: int
-    chapter_index: int
-    chapter_title: str
-    chapter_summary: str
-    context: str = ""
+    crud = CrudBase(db)
+    chapter = crud.get_or_404(ChapterContent, chap_id, ENTITY)
+    crud.delete_and_commit(chapter)
+    return DELETE_OK
 
 
 @router.post("/generate", response_model=ChapterContentResponse)
 async def ai_generate_chapter(req: GenerateChapterRequest, db: Session = Depends(get_db)):
-    content = await generate_chapter(db, req.chapter_title, req.chapter_summary, req.context)
-    chap = ChapterContent(
-        outline_id=req.outline_id,
-        chapter_index=req.chapter_index,
-        title=req.chapter_title,
+    status = "completed"
+    content = await ChapterGenerator(db).generate(
+        novel_id=req.novel_id,
+        worldbuilding_id=req.worldbuilding_id,
+        chapter_title_id=req.chapter_title_id,
+        description=req.description,
+    )
+
+    if req.chapter_id:
+        return update_chapter(req.chapter_id, ChapterContentUpdate(content=content, status=status), db)
+    
+    settings = ChapterContentCreate(
+        chapter_title_id=req.chapter_title_id,
         content=content,
-        status="completed",
+        status=status,
     )
-    db.add(chap)
-    db.commit()
-    db.refresh(chap)
-    return chap
+    return create_chapter(settings, db)
 
 
-@router.get("/export/{outline_id}")
-def export_chapters(outline_id: int, db: Session = Depends(get_db)):
-    chapters = (
-        db.query(ChapterContent)
-        .filter(ChapterContent.outline_id == outline_id)
-        .order_by(ChapterContent.chapter_index)
-        .all()
-    )
-    if not chapters:
-        raise HTTPException(status_code=404, detail="該大綱尚無章節內容")
-
-    lines = []
-    for ch in chapters:
-        lines.append(f"第{ch.chapter_index + 1}章 {ch.title}")
-        lines.append("")
-        lines.append(ch.content)
-        lines.append("")
-        lines.append("─" * 40)
-        lines.append("")
-
-    return PlainTextResponse("\n".join(lines), media_type="text/plain; charset=utf-8")
+@router.post("/{chap_id}/summary", response_model=ChapterContentResponse)
+async def regenerate_summary(chap_id: int, db: Session = Depends(get_db)):
+    chapter = CrudBase(db).get_or_404(ChapterContent, chap_id, ENTITY)
+    compacted = await ChapterGenerator(db).compact(chapter.content)
+    return update_chapter(chap_id, ChapterContentUpdate(summary=compacted), db)

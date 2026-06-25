@@ -1,101 +1,104 @@
-import json
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+
 from database import get_db
-from models.schemas import (
-    Outline, OutlineCreate, OutlineUpdate, OutlineResponse,
-)
-from services.ai_service import generate_outline
+from models.outline import Outline, OutlineCreate, OutlineUpdate, OutlineResponse, ChapterTitle
+from crud_base import CrudBase
+from services.ai_service.generators.outline import OutlineGenerator
+from utils import get_novel_id_by_ct
 
 router = APIRouter()
 
-
-def _enrich_outline(outline: Outline) -> dict:
-    """將 Outline ORM 物件轉為 dict，並解析 chapters_json"""
-    data = {
-        "id": outline.id,
-        "worldbuilding_id": outline.worldbuilding_id,
-        "title": outline.title,
-        "summary": outline.summary,
-        "chapters_json": outline.chapters_json,
-        "created_at": outline.created_at,
-        "updated_at": outline.updated_at,
-    }
-    try:
-        data["chapters"] = json.loads(outline.chapters_json)
-    except (json.JSONDecodeError, TypeError):
-        data["chapters"] = []
-    return data
+DELETE_OK = {"message": "已刪除"}
+ENTITY = "大綱"
 
 
-@router.post("/")
+@router.post("/", response_model=OutlineResponse)
 def create_outline(data: OutlineCreate, db: Session = Depends(get_db)):
     outline = Outline(**data.model_dump())
     db.add(outline)
     db.commit()
     db.refresh(outline)
-    return _enrich_outline(outline)
+    return outline
 
 
-@router.get("/")
+@router.get("/", response_model=list[OutlineResponse])
 def list_outlines(
-    worldbuilding_id: int = Query(None),
+    worldbuilding_id: Optional[int] = Query(None),
+    novel_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ):
     q = db.query(Outline)
     if worldbuilding_id is not None:
         q = q.filter(Outline.worldbuilding_id == worldbuilding_id)
-    return [_enrich_outline(o) for o in q.all()]
+    if novel_id is not None:
+        q = q.filter(Outline.novel_id == novel_id)
+    return q.order_by(Outline.updated_at.desc()).all()
 
 
-@router.get("/{outline_id}")
+@router.get("/{outline_id}", response_model=OutlineResponse)
 def get_outline(outline_id: int, db: Session = Depends(get_db)):
-    outline = db.query(Outline).filter(Outline.id == outline_id).first()
-    if not outline:
-        raise HTTPException(status_code=404, detail="大綱不存在")
-    return _enrich_outline(outline)
+    return CrudBase(db).get_or_404(Outline, outline_id, ENTITY)
 
 
-@router.put("/{outline_id}")
+@router.put("/{outline_id}", response_model=OutlineResponse)
 def update_outline(outline_id: int, data: OutlineUpdate, db: Session = Depends(get_db)):
-    outline = db.query(Outline).filter(Outline.id == outline_id).first()
-    if not outline:
-        raise HTTPException(status_code=404, detail="大綱不存在")
-    for key, val in data.model_dump(exclude_unset=True).items():
-        setattr(outline, key, val)
-    db.commit()
-    db.refresh(outline)
-    return _enrich_outline(outline)
+    crud = CrudBase(db)
+    outline = crud.get_or_404(Outline, outline_id, ENTITY)
+    return crud.update_and_commit(outline, data)
 
 
 @router.delete("/{outline_id}")
 def delete_outline(outline_id: int, db: Session = Depends(get_db)):
-    outline = db.query(Outline).filter(Outline.id == outline_id).first()
-    if not outline:
-        raise HTTPException(status_code=404, detail="大綱不存在")
-    db.delete(outline)
-    db.commit()
-    return {"message": "已刪除"}
+    crud = CrudBase(db)
+    outline = crud.get_or_404(Outline, outline_id, ENTITY)
+    crud.delete_and_commit(outline)
+    return DELETE_OK
 
 
 class GenerateOutlineRequest(BaseModel):
+    novel_id: int
     worldbuilding_id: int
-    context: str = ""
     description: str = ""
+    character_ids: Optional[list[int]] = None
 
 
-@router.post("/generate")
+@router.post("/generate", response_model=OutlineResponse)
 async def ai_generate_outline(req: GenerateOutlineRequest, db: Session = Depends(get_db)):
-    result = await generate_outline(db, req.context, req.description)
-    chapters = result.get("chapters", [])
-    outline = Outline(
+    result = await OutlineGenerator(db).generate(
+        novel_id=req.novel_id,
+        worldbuilding_id=req.worldbuilding_id,
+        description=req.description,
+        character_ids=req.character_ids,
+    )
+    outline_data = OutlineCreate(
+        novel_id=req.novel_id,
         worldbuilding_id=req.worldbuilding_id,
         title=result.get("title", ""),
-        summary=result.get("summary", ""),
-        chapters_json=json.dumps(chapters, ensure_ascii=False),
+        description=result.get("description", ""),
     )
-    db.add(outline)
+
+    outline = create_outline(outline_data, db)
+
+    for i, ct_data in enumerate(result.get("chapters", [])):
+        ct = ChapterTitle(
+            outline_id=outline.id,
+            idx=float(i),
+            title=ct_data.get("title", f"第{i+1}章"),
+        )
+        db.add(ct)
+    db.commit()
+    db.refresh(ct)
+    return outline
+
+
+@router.post("/{outline_id}/summary", response_model=OutlineResponse)
+async def regenerate_outline_summary(outline_id: int, db: Session = Depends(get_db)):
+    outline = CrudBase(db).get_or_404(Outline, outline_id, ENTITY)
+    outline.summary = await OutlineGenerator(db).compact(outline.description)
     db.commit()
     db.refresh(outline)
-    return _enrich_outline(outline)
+    return outline
