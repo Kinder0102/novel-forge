@@ -50,12 +50,8 @@
       </div>
     </div>
   </nav>
-<template v-if="novelTitle">
-            <span class="text-gray-400">|</span>
-            <span class="text-sm text-gray-300 font-medium truncate max-w-[200px]">
-              {{ novelTitle }}
-            </span>
-          </template></template><script setup lang="ts">
+</template>
+<script setup lang="ts">
 import { ref, type PropType } from 'vue'
 import { useRoute } from 'vue-router'
 

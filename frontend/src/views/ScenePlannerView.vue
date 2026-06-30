@@ -87,70 +87,8 @@
     </template>
     <p v-else-if="!outlineStore.loading" class="text-gray-400 text-center py-8">{{ t('scene.outlineNotFound') }}</p>
   </div>
-<template v-if="outline">
-      
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-2">{{ outline.title }}</h2>
-        <p class="text-gray-500 text-sm">{{ outline.summary }}</p>
-      </div>
-
-      
-      <div v-if="chapterTitles.length" class="mb-6">
-        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t('scene.selectChapter') }}</label>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="(ct, ix) in chapterTitles"
-            :key="ct.id"
-            @click="selectChapter(ct)"
-            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            :class="selectedChapter?.id === ct.id ? 'bg-rose-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-          >
-            {{ t('chapter.chapterNum', { n: ix + 1 }) }} {{ ct.title }}
-          </button>
-        </div>
-      </div>
-
-      
-      <div
-        v-if="selectedChapter"
-        class="flex items-center space-x-3 mb-4 text-sm text-gray-500"
-      >
-        <font-awesome-icon icon="fa-solid fa-clapperboard" class="text-rose-400" />
-        <span>
-          {{ t('scene.currentChapter') }}
-          <span class="font-medium text-gray-700">{{ selectedChapter.title }}</span>
-        </span>
-        <span v-if="!sceneStore.loading" class="text-gray-300">|</span>
-        <span v-if="!sceneStore.loading">{{ t('scene.sceneCount', { count: sceneStore.scenes.length }) }}</span>
-      </div>
-
-      <template v-if="selectedChapter">
-        <SceneForm
-          ref="formRef"
-          :novel-id="novelId"
-          :chapter-title-id="selectedChapter.id"
-        />
-        <SceneList
-          :chapter-title-id="selectedChapter.id"
-          @edit-scene="onEditScene"
-        />
-      </template>
-      <p v-else-if="chapterTitles.length" class="text-gray-400 text-center py-8">{{ t('scene.selectChapterPrompt') }}</p>
-      <p v-else class="text-gray-400 text-center py-8">
-        <font-awesome-icon icon="fa-solid fa-circle-info" class="text-3xl mb-2 block" />
-        {{ t('scene.noChapterPrompt') }}
-      </p>
-    <template v-if="selectedChapter">
-        <SceneForm
-          ref="formRef"
-          :novel-id="novelId"
-          :chapter-title-id="selectedChapter.id"
-        />
-        <SceneList
-          :chapter-title-id="selectedChapter.id"
-          @edit-scene="onEditScene"
-        />
-      </template></template></template><script setup lang="ts">
+</template>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'

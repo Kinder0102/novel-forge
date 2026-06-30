@@ -63,57 +63,8 @@
 
     <p v-else class="text-gray-400 text-center py-8">{{ t('read.chapterNotFound') }}</p>
   </div>
-<template v-else-if="chapter">
-      
-      <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
-        <router-link
-          :to="`/novel/${novelId}`"
-          class="text-sm text-gray-400 hover:text-gray-600 transition-colors flex items-center space-x-1"
-        >
-          <font-awesome-icon icon="fa-solid fa-arrow-left" />
-          <span>{{ t('read.backToCatalog') }}</span>
-        </router-link>
-        <span class="text-xs text-gray-400">{{ outline?.title || '' }}</span>
-      </div>
-
-      
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ chapter.title }}</h1>
-      <p class="text-sm text-gray-400 mb-10">{{ t('read.chapterNum', { n: currentPos + 1 }) }}</p>
-
-      
-      <article class="prose prose-lg prose-indigo max-w-none leading-relaxed text-gray-800">
-        <p
-          v-for="(para, i) in paragraphs"
-          :key="i"
-          class="mb-4"
-        >{{ para }}</p>
-      </article>
-
-      
-      <div class="mt-12 pt-6 border-t border-gray-200 flex items-center justify-between">
-        <button
-          v-if="hasPrev"
-          @click="goTo(sortedTitles[currentPos - 1].id)"
-          class="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-        >
-          <font-awesome-icon icon="fa-solid fa-chevron-left" class="text-xs" />
-          <span>{{ t('read.prevChapter') }}</span>
-        </button>
-        <span v-else class="w-24"></span>
-
-        <span class="text-xs text-gray-400">{{ currentPos + 1 }} / {{ sortedTitles.length }}</span>
-
-        <button
-          v-if="hasNext"
-          @click="goTo(sortedTitles[currentPos + 1].id)"
-          class="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-        >
-          <span>{{ t('read.nextChapter') }}</span>
-          <font-awesome-icon icon="fa-solid fa-chevron-right" class="text-xs" />
-        </button>
-        <span v-else class="w-24"></span>
-      </div>
-    </template></template><script setup lang="ts">
+</template>
+<script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'

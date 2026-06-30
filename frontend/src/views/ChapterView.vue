@@ -55,30 +55,9 @@
     </template>
     <p v-else-if="!outlineStore.loading" class="text-gray-400 text-center py-8">{{ t('chapter.outlineNotFound') }}</p>
   </div>
-<template v-if="outline">
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-2">{{ outline.title }}</h2>
-        <p class="text-gray-500 text-sm">{{ outline.description }}</p>
-      </div>
+</template>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-1">
-          <ChapterList
-            :chapters="chapterTitles"
-            :selected="selectedChapterTitle"
-            @select="selectChapter"
-          />
-        </div>
-        <div class="lg:col-span-2">
-          <ChapterEditor
-            v-if="selectedChapterTitle"
-            :novel-id="novelId"
-            :chapter-title="selectedChapterTitle"
-          />
-          <p v-else class="text-gray-400 text-center py-12">{{ t('chapter.selectChapterPrompt') }}</p>
-        </div>
-      </div>
-    </template></template><script setup lang="ts">
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useOutlineStore } from '../stores/outline'
